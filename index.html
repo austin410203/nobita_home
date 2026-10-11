@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>野比家 Nobita's House</title>
+  <link rel="stylesheet" href="./src/style.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- start / pause overlay -->
+  <div id="overlay">
+    <div class="card">
+      <h1>野比家 <small>NOBITA's HOUSE</small></h1>
+      <p id="loading">載入中… <span id="progress">0%</span></p>
+      <button id="start" disabled>點擊開始探索</button>
+      <ul class="keys">
+        <li><b>W A S D</b> 移動　<b>Shift</b> 跑步　<b>滑鼠</b> 轉動視角</li>
+        <li><b>E</b> 或 <b>左鍵</b> 開關門・窗・抽屜・紙拉門</li>
+        <li><b>L</b> 顯示／隱藏附近物件名稱　<b>Esc</b> 暫停</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="crosshair"></div>
+  <div id="room"></div>
+  <div id="tooltip"><div class="name"></div><div class="desc"></div><div class="hint"></div></div>
+  <div id="help">E：互動　L：名稱標籤　Esc：暫停</div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
