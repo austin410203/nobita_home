@@ -27,7 +27,10 @@
         <li><b>W A S D</b> 移動　<b>Shift</b> 跑步　<b>滑鼠</b> 轉動視角</li>
         <li><b>E</b> 或 <b>左鍵</b> 開關門・窗・抽屜・紙拉門</li>
         <li><b>L</b> 顯示／隱藏附近物件名稱　<b>Esc</b> 暫停</li>
+        <li><b>V</b> 切換渲染風格（<b>Shift+V</b> 上一個）　<b>1</b>～<b>9</b> 直接選擇</li>
       </ul>
+      <h2>渲染風格參考</h2>
+      <ol id="styleList"></ol>
     </div>
   </div>
 
@@ -35,7 +38,8 @@
   <div id="crosshair"></div>
   <div id="room"></div>
   <div id="tooltip"><div class="name"></div><div class="desc"></div><div class="hint"></div></div>
-  <div id="help">E：互動　L：名稱標籤　Esc：暫停</div>
+  <div id="style"><div class="row"><span class="idx"></span><span class="sname"></span></div><div class="sref"></div><div class="sdesc"></div></div>
+  <div id="help">E：互動　L：名稱標籤　V／1–9：渲染風格　Esc：暫停</div>
 
   <script type="module" src="./src/main.js"></script>
 </body>

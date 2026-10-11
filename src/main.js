@@ -5,6 +5,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import { OutlineEffect } from 'three/addons/effects/OutlineEffect.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { createStyler, STYLES } from './styles.js';
 
 const MODEL_URL = './models/nobita_house.glb';
 const EYE = 1.5;            // eye height (m) – a 5th grader would be ~1.25, an adult ~1.6
@@ -34,7 +35,8 @@ scene.fog = new THREE.Fog(0xd6ebff, 35, 110);
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 300);
 
 // anime-style lighting: cool sky fill + warm sun with crisp shadows
-scene.add(new THREE.HemisphereLight(0xd9e8ff, 0x9a8a78, 1.7));
+const hemi = new THREE.HemisphereLight(0xd9e8ff, 0x9a8a78, 1.7);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff3e2, 2.3);
 sun.position.set(-14, 20, 16);
 sun.target.position.set(3, 0, -5);
@@ -46,6 +48,8 @@ scene.add(sun, sun.target);
 
 // outlines (inverted hull) – brown ink like the reference sheet
 const effect = new OutlineEffect(renderer, { defaultThickness: 0.0032, defaultColor: [0.24, 0.15, 0.11], defaultAlpha: 1 });
+const styler = createStyler({ renderer, scene, camera, effect, sun, hemi });
+let houseRoot = null;
 
 // 3-step toon ramp
 const gradient = new THREE.DataTexture(new Uint8Array([105, 105, 105, 255, 185, 185, 185, 255, 255, 255, 255, 255]), 3, 1);
@@ -96,12 +100,15 @@ addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (e.code === 'KeyE' && controls.isLocked) interact();
   if (e.code === 'KeyL') { showTags = !showTags; refreshTags(true); }
+  if (e.code === 'KeyV' && houseRoot) setStyle(styler.index + (e.shiftKey ? -1 : 1));
+  const dg = /^Digit([1-9])$/.exec(e.code);
+  if (dg && houseRoot && +dg[1] <= STYLES.length) setStyle(+dg[1] - 1);
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('mousedown', (e) => { if (controls.isLocked && e.button === 0) interact(); });
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(innerWidth, innerHeight); labelRenderer.setSize(innerWidth, innerHeight); styler.resize(innerWidth, innerHeight);
 });
 
 // ---------------------------------------------------------------- load the house
@@ -132,6 +139,7 @@ loader.load(MODEL_URL, (gltf) => {
       m.userData.outlineParameters = noLine ? { visible: false } : { thickness: 0.0032, color: [0.24, 0.15, 0.11], alpha: 1 };
       cache.set(src, m);
     }
+    o.userData._src = src;
     o.material = cache.get(src);
     o.castShadow = !src.transparent;
     o.receiveShadow = true;
@@ -143,6 +151,8 @@ loader.load(MODEL_URL, (gltf) => {
     pickables.push(o);
   });
   scene.add(root);
+  houseRoot = root;
+  setStyle(0, false);
 
   // animations: one "<name>_Open" clip per openable object (0 = closed -> end = open)
   mixer = new THREE.AnimationMixer(root);
@@ -321,9 +331,27 @@ renderer.setAnimationLoop(() => {
   if (mixer) mixer.update(dt);
   if (controls.isLocked) move(dt);
   if (mixer) { updateHUD(); refreshTags(false); }
-  effect.render(scene, camera);
+  styler.render(clock.elapsedTime);
   labelRenderer.render(scene, camera);
 });
+
+// ---------------------------------------------------------------- render style switching
+const styleEl = document.getElementById('style');
+let styleTimer = 0;
+function setStyle(i, announce = true) {
+  const st = styler.apply(i, houseRoot);
+  styleEl.querySelector('.idx').textContent = `${styler.index + 1}/${STYLES.length}`;
+  styleEl.querySelector('.sname').textContent = st.name;
+  styleEl.querySelector('.sref').textContent = '參考：' + st.refs;
+  styleEl.querySelector('.sdesc').textContent = st.desc;
+  document.querySelectorAll('#styleList li').forEach((li, k) => li.classList.toggle('on', k === styler.index));
+  styleEl.classList.add('expanded');
+  clearTimeout(styleTimer);
+  if (announce) styleTimer = setTimeout(() => styleEl.classList.remove('expanded'), 4000);
+  else styleEl.classList.remove('expanded');
+}
+document.getElementById('styleList').innerHTML = STYLES.map((s, k) =>
+  `<li><b>${k + 1}</b><span><strong>${s.name}</strong><em>${s.refs}</em></span></li>`).join('');
 
 // debug helper in the console: window.nobita.toggle('Door_2F_Nobita')
 window.nobita = {
@@ -341,7 +369,8 @@ window.nobita = {
   walk: (codes, sec) => { codes.forEach((c) => keys.add(c)); for (let t = 0; t < sec; t += 1 / 60) move(1 / 60); codes.forEach((c) => keys.delete(c)); return { pos: camera.position.toArray().map((v) => +v.toFixed(2)), room: roomEl.textContent }; },
   look: (yawDeg, pitchDeg = 0) => { camera.rotation.set(THREE.MathUtils.degToRad(pitchDeg), THREE.MathUtils.degToRad(yawDeg), 0, 'YXZ'); },
   tick: (sec) => { for (let t = 0; t < sec; t += 1 / 60) mixer.update(1 / 60); scene.updateMatrixWorld(true); },
-  shot: () => { effect.render(scene, camera); return 'ok'; },
+  shot: () => { styler.render(0); return 'ok'; },
   focus: () => { updateHUD(); return focused && { label: focused.labelled?.userData.label, openable: focused.openable?.name }; },
   interact,
+  setStyle: (i) => { setStyle(i); styler.render(0); return STYLES[styler.index].name; },
 };
